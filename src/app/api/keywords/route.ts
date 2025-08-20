@@ -3,7 +3,7 @@ import crypto from 'crypto';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const hintKeywords = searchParams.get('hintKeywords');
     const siteId = searchParams.get('siteId');
     const biztpId = searchParams.get('biztpId');
