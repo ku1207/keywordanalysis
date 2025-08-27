@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 JSON 형태로 출력할 때 '''json과 같이 영역은 출력하지 말고 구조만 출력하십시오.
 
 ###구매여정 6단계 항목
-['인지/탐색 단계', '정보수집/비교 단계', '구매의사결정 단계', '구매/가입 단계', '사후관리 단계', '특수 키워드']
+['문제 인식 단계', '정보 탐색 단계', '대안 평가 단계', '구매 결정 단계', '구매 행동 단계', '구매 후 행동 단계']
 
 ###단어 목록
 [${batch.map(k => `"${k}"`).join(', ')}]
@@ -115,12 +115,12 @@ JSON 형태로 출력할 때 '''json과 같이 영역은 출력하지 말고 구
 // 목 데이터 생성 함수
 function getMockCategoryData(keywords: string[]) {
   const categories = [
-    '인지/탐색 단계',
-    '정보수집/비교 단계', 
-    '구매의사결정 단계',
-    '구매/가입 단계',
-    '사후관리 단계',
-    '특수 키워드'
+    '문제 인식 단계',
+    '정보 탐색 단계',
+    '대안 평가 단계',
+    '구매 결정 단계',
+    '구매 행동 단계',
+    '구매 후 행동 단계'
   ];
 
   const result: { [key: string]: string } = {};
@@ -128,15 +128,15 @@ function getMockCategoryData(keywords: string[]) {
   keywords.forEach((keyword, index) => {
     // 키워드 패턴에 따른 간단한 분류 로직
     if (keyword.includes('가격') || keyword.includes('비교') || keyword.includes('리뷰')) {
-      result[keyword] = '정보수집/비교 단계';
+      result[keyword] = '정보 탐색 단계';
     } else if (keyword.includes('구매') || keyword.includes('주문') || keyword.includes('결제')) {
-      result[keyword] = '구매/가입 단계';
+      result[keyword] = '대안 평가 단계';
     } else if (keyword.includes('할인') || keyword.includes('쿠폰')) {
-      result[keyword] = '구매의사결정 단계';
+      result[keyword] = '구매 결정 단계';
     } else if (keyword.includes('사용법') || keyword.includes('문의') || keyword.includes('AS')) {
-      result[keyword] = '사후관리 단계';
+      result[keyword] = '구매 행동 단계';
     } else if (keyword.includes('브랜드') || keyword.includes('추천')) {
-      result[keyword] = '인지/탐색 단계';
+      result[keyword] = '구매 후 행동 단계';
     } else {
       // 기본값은 순환하여 배정
       result[keyword] = categories[index % categories.length];

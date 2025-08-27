@@ -19,12 +19,12 @@ const stepLabels = ['키워드 검색량 조회', '분석 개요', '세부 분�
 
 // 기본 단계 정의
 const defaultJourneyStages = [
-  { stage: '1. 인지/탐색', key: '인지/탐색 단계', percentage: 0, color: 'bg-red-500' },
-  { stage: '2. 정보수집/비교', key: '정보수집/비교 단계', percentage: 0, color: 'bg-orange-500' },
-  { stage: '3. 구매의사결정', key: '구매의사결정 단계', percentage: 0, color: 'bg-yellow-500' },
-  { stage: '4. 구매/가입', key: '구매/가입 단계', percentage: 0, color: 'bg-green-500' },
-  { stage: '5. 사후관리', key: '사후관리 단계', percentage: 0, color: 'bg-blue-500' },
-  { stage: '6. 특수키워드', key: '특수 키워드', percentage: 0, color: 'bg-purple-500' },
+  { stage: '1. 문제 인식', key: '문제 인식 단계', percentage: 0, color: 'bg-red-500' },
+  { stage: '2. 정보 탐색', key: '정보 탐색 단계', percentage: 0, color: 'bg-orange-500' },
+  { stage: '3. 대안 평가', key: '대안 평가 단계', percentage: 0, color: 'bg-yellow-500' },
+  { stage: '4. 구매 결정', key: '구매 결정 단계', percentage: 0, color: 'bg-green-500' },
+  { stage: '5. 구매 행동', key: '구매 행동 단계', percentage: 0, color: 'bg-blue-500' },
+  { stage: '6. 구매 후 행동', key: '구매 후 행동 단계', percentage: 0, color: 'bg-purple-500' },
 ];
 
 export default function AnalysisOverviewPage() {
@@ -93,12 +93,12 @@ export default function AnalysisOverviewPage() {
         console.error('구매여정 분석 실패:', error);
         // 에러 시 기본값 사용
         setJourneyStages([
-          { stage: '1. 인지/탐색', key: '인지/탐색 단계', percentage: 25, color: 'bg-red-500' },
-          { stage: '2. 정보수집/비교', key: '정보수집/비교 단계', percentage: 20, color: 'bg-orange-500' },
-          { stage: '3. 구매의사결정', key: '구매의사결정 단계', percentage: 18, color: 'bg-yellow-500' },
-          { stage: '4. 구매/가입', key: '구매/가입 단계', percentage: 15, color: 'bg-green-500' },
-          { stage: '5. 사후관리', key: '사후관리 단계', percentage: 12, color: 'bg-blue-500' },
-          { stage: '6. 특수키워드', key: '특수 키워드', percentage: 10, color: 'bg-purple-500' },
+          { stage: '1. 문제 인식', key: '문제 인식 단계', percentage: 25, color: 'bg-red-500' },
+          { stage: '2. 정보 탐색', key: '정보 탐색 단계', percentage: 20, color: 'bg-orange-500' },
+          { stage: '3. 대안 평가', key: '대안 평가 단계', percentage: 18, color: 'bg-yellow-500' },
+          { stage: '4. 구매 결정', key: '구매 결정 단계', percentage: 15, color: 'bg-green-500' },
+          { stage: '5. 구매 행동', key: '구매 행동 단계', percentage: 12, color: 'bg-blue-500' },
+          { stage: '6. 구매 후 행동', key: '구매 후 행동 단계', percentage: 10, color: 'bg-purple-500' },
         ]);
       } finally {
         setLoading(false);
@@ -158,12 +158,12 @@ export default function AnalysisOverviewPage() {
                   구매여정 6단계 기준으로 키워드 분류 및 검색량 분석
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full border border-red-200">1. 인지/탐색</span>
-                  <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full border border-orange-200">2. 정보수집/비교</span>
-                  <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full border border-yellow-200">3. 구매의사결정</span>
-                  <span className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full border border-green-200">4. 구매/가입</span>
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full border border-blue-200">5. 사후관리</span>
-                  <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full border border-purple-200">6. 특수키워드</span>
+                  <span className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full border border-red-200">1. 문제 인식</span>
+                  <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full border border-orange-200">2. 정보 탐색</span>
+                  <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full border border-yellow-200">3. 대안 평가</span>
+                  <span className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full border border-green-200">4. 구매 결정</span>
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full border border-blue-200">5. 구매 행동</span>
+                  <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full border border-purple-200">6. 구매 후 행동</span>
                 </div>
               </div>
             </div>

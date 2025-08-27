@@ -8,16 +8,17 @@ import { Card } from '@/components/ui/card';
 import { useAnalysisStore } from '@/store/keyword-analysis';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis } from 'recharts';
 import axios from 'axios';
+import { MarketingInsights } from '@/types/marketing-insights';
 
 const stepLabels = ['키워드 검색량 조회', '분석 개요', '세부 분석', '종합 인사이트', '마케팅 전략 제안'];
 
 const journeyStages = [
-  { stage: '1. 인지/탐색', key: 'awareness', color: 'bg-red-500', borderColor: 'border-red-500', textColor: 'text-red-700', chartColor: '#ef4444' },
-  { stage: '2. 정보수집/비교', key: 'consideration', color: 'bg-orange-500', borderColor: 'border-orange-500', textColor: 'text-orange-700', chartColor: '#f97316' },
-  { stage: '3. 구매의사결정', key: 'decision', color: 'bg-yellow-500', borderColor: 'border-yellow-500', textColor: 'text-yellow-700', chartColor: '#eab308' },
-  { stage: '4. 구매/가입', key: 'purchase', color: 'bg-green-500', borderColor: 'border-green-500', textColor: 'text-green-700', chartColor: '#22c55e' },
-  { stage: '5. 사후관리', key: 'retention', color: 'bg-blue-500', borderColor: 'border-blue-500', textColor: 'text-blue-700', chartColor: '#3b82f6' },
-  { stage: '6. 특수키워드', key: 'special', color: 'bg-purple-500', borderColor: 'border-purple-500', textColor: 'text-purple-700', chartColor: '#8b5cf6' },
+  { stage: '1. 문제 인식', key: 'awareness', color: 'bg-red-500', borderColor: 'border-red-500', textColor: 'text-red-700', chartColor: '#ef4444' },
+  { stage: '2. 정보 탐색', key: 'consideration', color: 'bg-orange-500', borderColor: 'border-orange-500', textColor: 'text-orange-700', chartColor: '#f97316' },
+  { stage: '3. 대안 평가', key: 'decision', color: 'bg-yellow-500', borderColor: 'border-yellow-500', textColor: 'text-yellow-700', chartColor: '#eab308' },
+  { stage: '4. 구매 결정', key: 'purchase', color: 'bg-green-500', borderColor: 'border-green-500', textColor: 'text-green-700', chartColor: '#22c55e' },
+  { stage: '5. 구매 행동', key: 'retention', color: 'bg-blue-500', borderColor: 'border-blue-500', textColor: 'text-blue-700', chartColor: '#3b82f6' },
+  { stage: '6. 구매 후 행동', key: 'special', color: 'bg-purple-500', borderColor: 'border-purple-500', textColor: 'text-purple-700', chartColor: '#8b5cf6' },
 ];
 
 export default function DetailedAnalysisPage() {
@@ -45,6 +46,7 @@ export default function DetailedAnalysisPage() {
     totalVolume: number;
   }>}>({});
   const [loading, setLoading] = useState(false);
+  const [marketingInsights, setMarketingInsights] = useState<{[key: string]: MarketingInsights}>({});
 
   useEffect(() => {
     setCurrentStep(4);
@@ -90,12 +92,12 @@ export default function DetailedAnalysisPage() {
         };
         
         const stageMapping: {[key: string]: string} = {
-          '인지/탐색 단계': 'awareness',
-          '정보수집/비교 단계': 'consideration',
-          '구매의사결정 단계': 'decision',
-          '구매/가입 단계': 'purchase',
-          '사후관리 단계': 'retention',
-          '특수 키워드': 'special'
+          '문제 인식 단계': 'awareness',
+          '정보 탐색 단계': 'consideration',
+          '대안 평가 단계': 'decision',
+          '구매 결정 단계': 'purchase',
+          '구매 행동 단계': 'retention',
+          '구매 후 행동 단계': 'special'
         };
         
         keywordData.forEach(item => {
@@ -124,11 +126,72 @@ export default function DetailedAnalysisPage() {
         });
         
         setStageKeywords(stages);
+        
+        // 모든 단계의 마케팅 인사이트를 병렬로 생성
+        await generateAllMarketingInsights(stages);
+        
       } catch (error) {
         console.error('키워드 분류 실패:', error);
       } finally {
         setLoading(false);
       }
+    };
+
+    // 모든 단계의 마케팅 인사이트를 병렬로 생성하는 함수
+    const generateAllMarketingInsights = async (stages: {[key: string]: Array<{
+      keyword: string;
+      x: number;
+      y: number;
+      z: number;
+      pcCtr: number;
+      mobileCtr: number;
+      pcCount: number;
+      mobileCount: number;
+      totalVolume: number;
+    }>}) => {
+      console.log('모든 단계의 마케팅 인사이트 생성 시작');
+      
+      const insightPromises = journeyStages.map(async (stage) => {
+        const stageKeywords = stages[stage.key];
+        if (!stageKeywords || stageKeywords.length === 0) {
+          return { stageKey: stage.key, insights: null };
+        }
+
+        try {
+          const keywordData = stageKeywords.map(kw => ({
+            keyword: kw.keyword,
+            pcCount: kw.pcCount,
+            mobileCount: kw.mobileCount,
+            pcCtr: kw.pcCtr,
+            mobileCtr: kw.mobileCtr
+          }));
+          
+          const response = await axios.post('/api/gpt-insights', {
+            stage: stage.stage,
+            keywords: keywordData
+          });
+          
+          console.log(`${stage.stage} 마케팅 인사이트 생성 완료`);
+          return { stageKey: stage.key, insights: response.data };
+        } catch (error) {
+          console.error(`${stage.stage} 마케팅 인사이트 생성 실패:`, error);
+          return { stageKey: stage.key, insights: null };
+        }
+      });
+
+      // 모든 API 호출이 완료될 때까지 대기
+      const results = await Promise.all(insightPromises);
+      
+      // 결과를 상태에 저장
+      const insightsData: {[key: string]: MarketingInsights} = {};
+      results.forEach(result => {
+        if (result.insights) {
+          insightsData[result.stageKey] = result.insights;
+        }
+      });
+      
+      setMarketingInsights(insightsData);
+      console.log('모든 마케팅 인사이트 생성 완료');
     };
     
     classifyKeywords();
@@ -190,13 +253,13 @@ export default function DetailedAnalysisPage() {
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-gray-600">데이터를 분석하는 중...</span>
+                  <span className="ml-3 text-gray-600">키워드 분류 및 마케팅 인사이트를 분석하는 중...</span>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {/* 버블 차트 */}
                   <div className="p-4 bg-white rounded-lg border">
-                    <h4 className="font-medium text-gray-900 mb-4">키워드 클릭률 분석 (버블 차트)</h4>
+                    <h4 className="font-medium text-gray-900 mb-4">키워드 포지션(버블 차트)</h4>
                     <div className="h-96">
                       <ResponsiveContainer width="100%" height="100%">
                         <ScatterChart
@@ -250,23 +313,159 @@ export default function DetailedAnalysisPage() {
                       * 버블 크기는 총 검색량(PC + 모바일)을 나타냅니다.
                     </p>
                   </div>
-                  
-                  {/* 키워드 목록 */}
-                  <div className="p-4 bg-white rounded-lg border">
-                    <h4 className="font-medium text-gray-900 mb-2">해당 단계 키워드 목록</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {(stageKeywords[selectedStage] || []).slice(0, 12).map((item, index) => (
-                        <div key={index} className="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">
-                          {item.keyword}
+
+                  {/* 마케팅 인사이트 섹션 */}
+                  {marketingInsights[selectedStage] && (
+                    <div className="space-y-6 mt-6">
+                      {/* 상단: 고객 심리 & 리스크&장벽 좌우 분할 */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* 고객 심리 */}
+                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <h5 className="font-semibold text-blue-800 mb-3 flex items-center">
+                            <div className="w-2 h-2 bg-blue-600 rounded-full mr-2"></div>
+                            고객 심리
+                          </h5>
+                          <div className="space-y-4">
+                            <div>
+                              <h6 className="text-sm font-medium text-blue-700 mb-2">데이터 분석</h6>
+                              <div className="space-y-2">
+                                <div className="pl-2 border-l-2 border-blue-200">
+                                  <span className="text-xs font-medium text-blue-600">감정 상태:</span>
+                                  <p className="text-sm text-gray-700 leading-relaxed">
+                                    {marketingInsights[selectedStage].customerPsychology.dataDriven.emotions}
+                                  </p>
+                                </div>
+                                <div className="pl-2 border-l-2 border-blue-200">
+                                  <span className="text-xs font-medium text-blue-600">행동 동기:</span>
+                                  <p className="text-sm text-gray-700 leading-relaxed">
+                                    {marketingInsights[selectedStage].customerPsychology.dataDriven.motivations}
+                                  </p>
+                                </div>
+                                <div className="pl-2 border-l-2 border-blue-200">
+                                  <span className="text-xs font-medium text-blue-600">인지 수준:</span>
+                                  <p className="text-sm text-gray-700 leading-relaxed">
+                                    {marketingInsights[selectedStage].customerPsychology.dataDriven.cognitiveLevel}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <h6 className="text-sm font-medium text-blue-700 mb-2">인사이트</h6>
+                              <div className="space-y-2">
+                                <div className="pl-2 border-l-2 border-blue-200">
+                                  <span className="text-xs font-medium text-blue-600">핵심 욕구:</span>
+                                  <p className="text-sm text-gray-700 leading-relaxed">
+                                    {marketingInsights[selectedStage].customerPsychology.generalInsight.needs}
+                                  </p>
+                                </div>
+                                <div className="pl-2 border-l-2 border-blue-200">
+                                  <span className="text-xs font-medium text-blue-600">불안 요소:</span>
+                                  <p className="text-sm text-gray-700 leading-relaxed">
+                                    {marketingInsights[selectedStage].customerPsychology.generalInsight.anxieties}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      ))}
-                      {(stageKeywords[selectedStage] || []).length > 12 && (
-                        <div className="text-sm text-gray-500 px-2 py-1">
-                          +{(stageKeywords[selectedStage] || []).length - 12}개 더
+
+                        {/* 리스크&장벽 */}
+                        <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                          <h5 className="font-semibold text-orange-800 mb-3 flex items-center">
+                            <div className="w-2 h-2 bg-orange-600 rounded-full mr-2"></div>
+                            리스크&장벽
+                          </h5>
+                          <div className="space-y-4">
+                            <div>
+                              <h6 className="text-sm font-medium text-orange-700 mb-2">데이터 분석</h6>
+                              <div className="space-y-2">
+                                <div className="pl-2 border-l-2 border-orange-200">
+                                  <span className="text-xs font-medium text-orange-600">내적 저항:</span>
+                                  <p className="text-sm text-gray-700 leading-relaxed">
+                                    {marketingInsights[selectedStage].risksAndBarriers.dataDriven.internal}
+                                  </p>
+                                </div>
+                                <div className="pl-2 border-l-2 border-orange-200">
+                                  <span className="text-xs font-medium text-orange-600">외적 장벽:</span>
+                                  <p className="text-sm text-gray-700 leading-relaxed">
+                                    {marketingInsights[selectedStage].risksAndBarriers.dataDriven.external}
+                                  </p>
+                                </div>
+                                <div className="pl-2 border-l-2 border-orange-200">
+                                  <span className="text-xs font-medium text-orange-600">리스크 유형:</span>
+                                  <p className="text-sm text-gray-700 leading-relaxed">
+                                    {marketingInsights[selectedStage].risksAndBarriers.dataDriven.riskTypes}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <h6 className="text-sm font-medium text-orange-700 mb-2">인사이트</h6>
+                              <div className="space-y-2">
+                                <div className="pl-2 border-l-2 border-orange-200">
+                                  <span className="text-xs font-medium text-orange-600">일반적 장벽:</span>
+                                  <p className="text-sm text-gray-700 leading-relaxed">
+                                    {marketingInsights[selectedStage].risksAndBarriers.generalInsight.commonBarriers}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* 하단: 콘텐츠/메시지 전략 전체 폭 */}
+                      <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                        <h5 className="font-semibold text-green-800 mb-3 flex items-center">
+                          <div className="w-2 h-2 bg-green-600 rounded-full mr-2"></div>
+                          콘텐츠/메시지 전략
+                        </h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <h6 className="text-sm font-medium text-green-700 mb-2">데이터 분석</h6>
+                            <div className="space-y-2">
+                              <div className="pl-2 border-l-2 border-green-200">
+                                <span className="text-xs font-medium text-green-600">메시지 톤:</span>
+                                <p className="text-sm text-gray-700 leading-relaxed">
+                                  {marketingInsights[selectedStage].contentMessagingStrategy.dataDriven.messageTone}
+                                </p>
+                              </div>
+                              <div className="pl-2 border-l-2 border-green-200">
+                                <span className="text-xs font-medium text-green-600">콘텐츠 유형:</span>
+                                <p className="text-sm text-gray-700 leading-relaxed">
+                                  {marketingInsights[selectedStage].contentMessagingStrategy.dataDriven.contentTypes}
+                                </p>
+                              </div>
+                              <div className="pl-2 border-l-2 border-green-200">
+                                <span className="text-xs font-medium text-green-600">핵심 포인트:</span>
+                                <p className="text-sm text-gray-700 leading-relaxed">
+                                  {marketingInsights[selectedStage].contentMessagingStrategy.dataDriven.corePoints}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <h6 className="text-sm font-medium text-green-700 mb-2">인사이트</h6>
+                            <div className="space-y-2">
+                              <div className="pl-2 border-l-2 border-green-200">
+                                <span className="text-xs font-medium text-green-600">심리적 해소:</span>
+                                <p className="text-sm text-gray-700 leading-relaxed">
+                                  {marketingInsights[selectedStage].contentMessagingStrategy.generalInsight.psychologyRelief}
+                                </p>
+                              </div>
+                              <div className="pl-2 border-l-2 border-green-200">
+                                <span className="text-xs font-medium text-green-600">가치 제안:</span>
+                                <p className="text-sm text-gray-700 leading-relaxed">
+                                  {marketingInsights[selectedStage].contentMessagingStrategy.generalInsight.valueProposition}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
+                  
                 </div>
               )}
             </div>
