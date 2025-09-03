@@ -175,9 +175,6 @@ export default function ComprehensiveInsightsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setCurrentStep, categoryData, keywordData]);
 
-  const handleNext = () => {
-    router.push('/step6');
-  };
 
   const handlePrev = () => {
     prevStep();
@@ -277,7 +274,7 @@ export default function ComprehensiveInsightsPage() {
                                       <svg viewBox="0 0 200 200" className="w-full h-full transform -rotate-90">
                                         {(() => {
                                           const validEntries = Object.entries(range.resourceAllocation.budgetSplitPct)
-                                            .filter(([_, value]) => value && value !== 0);
+                                            .filter(([, value]) => value && value !== 0);
                                           
                                           const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'];
                                           let cumulativeAngle = 0;
@@ -320,7 +317,7 @@ export default function ComprehensiveInsightsPage() {
                                     {/* 범례 */}
                                     <div className="grid grid-cols-2 gap-3 mt-4 w-full">
                                       {Object.entries(range.resourceAllocation.budgetSplitPct)
-                                        .filter(([_, value]) => value && value !== 0)
+                                        .filter(([, value]) => value && value !== 0)
                                         .map(([key, value], index) => {
                                           const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'];
                                           return (
