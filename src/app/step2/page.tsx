@@ -9,7 +9,7 @@ import { Table } from '@/components/ui/table';
 import { useAnalysisStore } from '@/store/keyword-analysis';
 import { getKeywordTrendData } from '@/lib/api-client';
 
-const stepLabels = ['키워드 검색량 조회', '분석 개요', '세부 분석', '종합 인사이트', '마케팅 전략 제안'];
+const stepLabels = ['키워드 검색량 조회', '분석 개요', '세부 분석', '종합 인사이트'];
 
 
 export default function DataDisplayPage() {
@@ -73,7 +73,7 @@ export default function DataDisplayPage() {
     <div className="space-y-8">
       <Progress 
         currentStep={currentStep - 1} 
-        totalSteps={5} 
+        totalSteps={4} 
         stepLabels={stepLabels} 
       />
 

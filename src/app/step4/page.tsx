@@ -10,7 +10,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Responsive
 import axios from 'axios';
 import { MarketingInsights } from '@/types/marketing-insights';
 
-const stepLabels = ['키워드 검색량 조회', '분석 개요', '세부 분석', '종합 인사이트', '마케팅 전략 제안'];
+const stepLabels = ['키워드 검색량 조회', '분석 개요', '세부 분석', '종합 인사이트'];
 
 const journeyStages = [
   { stage: '전체', key: 'all', color: 'bg-gray-700', borderColor: 'border-gray-700', textColor: 'text-gray-700', chartColor: '#374151' },
@@ -229,7 +229,7 @@ export default function DetailedAnalysisPage() {
     <div className="space-y-8">
       <Progress 
         currentStep={currentStep - 1} 
-        totalSteps={5} 
+        totalSteps={4} 
         stepLabels={stepLabels} 
       />
 
