@@ -36,10 +36,8 @@ export async function POST(request: NextRequest) {
       // 모든 배치 결과를 저장할 객체
       let allCategoryData = {};
       
-      // 각 배치별로 GPT-5 호출
-      for (let batchIndex = 0; batchIndex < keywordBatches.length; batchIndex++) {
-        const batch = keywordBatches[batchIndex];
-        
+      // 각 배치를 병행 처리하기 위한 프로미스 배열 생성
+      const batchPromises = keywordBatches.map(async (batch, batchIndex) => {
         // 프롬프트 구성
         const prompt = `###지시사항
 아래 단어들을 충분히 분석하고 '구매여정 6단계 항목'중 가장 적절한 값에 매칭하여 JSON 형태로 출력하십시오.
@@ -59,7 +57,7 @@ JSON 형태로 출력할 때 '''json과 같이 영역은 출력하지 말고 구
   ...
 }`;
 
-        console.log(`📝 배치 ${batchIndex + 1}/${keywordBatches.length} 처리 중 (${batch.length}개 키워드)`);
+        console.log(`📝 배치 ${batchIndex + 1}/${keywordBatches.length} 처리 시작 (${batch.length}개 키워드)`);
         
         try {
           const result = await openai.responses.create({
@@ -74,26 +72,26 @@ JSON 형태로 출력할 때 '''json과 같이 영역은 출력하지 말고 구
           // JSON 파싱 시도
           try {
             const batchCategoryData = JSON.parse(result.output_text);
-            // 결과를 전체 결과 객체에 병합
-            allCategoryData = { ...allCategoryData, ...batchCategoryData };
+            return batchCategoryData;
           } catch (parseError) {
             console.error(`❌ 배치 ${batchIndex + 1} JSON 파싱 실패:`, parseError);
             // 파싱 실패 시 해당 배치만 목 데이터로 대체
-            const batchMockData = getMockCategoryData(batch);
-            allCategoryData = { ...allCategoryData, ...batchMockData };
+            return getMockCategoryData(batch);
           }
         } catch (apiError) {
           console.error(`❌ 배치 ${batchIndex + 1} API 호출 실패:`, apiError);
           // API 호출 실패 시 해당 배치만 목 데이터로 대체
-          const batchMockData = getMockCategoryData(batch);
-          allCategoryData = { ...allCategoryData, ...batchMockData };
+          return getMockCategoryData(batch);
         }
-        
-        // API 요청 간 잠시 대기 (rate limit 방지)
-        if (batchIndex < keywordBatches.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
-        }
-      }
+      });
+
+      // 모든 배치를 병행 처리
+      const batchResults = await Promise.all(batchPromises);
+      
+      // 모든 결과를 병합
+      batchResults.forEach(batchData => {
+        allCategoryData = { ...allCategoryData, ...batchData };
+      });
       
       console.log('🎉 모든 배치 처리 완료');
       return NextResponse.json(allCategoryData);

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface KeywordData {
   keyword: string;
@@ -18,21 +19,26 @@ export interface AnalysisState {
   keywordData: KeywordData[];
   totalSearchVolume: number;
   categoryData: {[keyword: string]: string};
+  searchVolumeTrends: unknown[];
   setCurrentStep: (step: number) => void;
   setKeyword: (keyword: string) => void;
   setKeywordData: (data: KeywordData[]) => void;
   setCategoryData: (data: {[keyword: string]: string}) => void;
+  setSearchVolumeTrends: (data: unknown[]) => void;
   calculateTotalSearchVolume: () => void;
   nextStep: () => void;
   prevStep: () => void;
 }
 
-export const useAnalysisStore = create<AnalysisState>((set, get) => ({
+export const useAnalysisStore = create<AnalysisState>()(
+  persist(
+    (set, get) => ({
   currentStep: 1,
   keyword: '',
   keywordData: [],
   totalSearchVolume: 0,
   categoryData: {},
+  searchVolumeTrends: [],
   
   setCurrentStep: (step) => set({ currentStep: step }),
   
@@ -44,6 +50,8 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   },
   
   setCategoryData: (data) => set({ categoryData: data }),
+  
+  setSearchVolumeTrends: (data) => set({ searchVolumeTrends: data }),
   
   calculateTotalSearchVolume: () => {
     const { keywordData } = get();
@@ -58,7 +66,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   
   nextStep: () => {
     const { currentStep } = get();
-    if (currentStep < 3) {
+    if (currentStep < 5) {
       set({ currentStep: currentStep + 1 });
     }
   },
@@ -69,4 +77,17 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       set({ currentStep: currentStep - 1 });
     }
   },
-}));
+}),
+{
+  name: 'keyword-analysis-storage',
+  partialize: (state) => ({
+    currentStep: state.currentStep,
+    keyword: state.keyword,
+    keywordData: state.keywordData,
+    totalSearchVolume: state.totalSearchVolume,
+    categoryData: state.categoryData,
+    searchVolumeTrends: state.searchVolumeTrends,
+  }),
+}
+)
+);

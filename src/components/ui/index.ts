@@ -41,3 +41,5 @@ export {
 } from "./table"
 export { Textarea } from "./textarea"
 export { Toggle, toggleVariants } from "./toggle"
+export { JourneyMap } from "./journey-map"
+export { GanttChart, CombinedChart } from "./gantt-chart"
