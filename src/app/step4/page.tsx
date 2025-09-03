@@ -331,7 +331,7 @@ export default function DetailedAnalysisPage() {
                           {selectedStage === 'all' ? (
                             // 전체 단계일 때 각 단계별로 색상 구분
                             ['awareness', 'consideration', 'decision', 'purchase', 'retention', 'special'].map(stageKey => {
-                              const stageData = (stageKeywords[selectedStage] || []).filter(item => item.stageKey === stageKey);
+                              const stageData = stageKeywords[stageKey] || [];
                               const stage = journeyStages.find(s => s.key === stageKey);
                               return stageData.length > 0 ? (
                                 <Scatter
