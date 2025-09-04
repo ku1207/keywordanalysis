@@ -4,7 +4,7 @@ interface LogContext {
   method?: string;
   url?: string;
   timestamp?: string;
-  [key: string]: string | number | boolean | undefined;
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 const LOG_ICONS = {
