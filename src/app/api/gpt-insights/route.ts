@@ -162,7 +162,7 @@ ${keywordInfoString}`;
         const insightData = JSON.parse(result.output_text);
         return NextResponse.json(insightData);
       } catch (parseError) {
-        apiLogger.parseError(`${stage}`, parseError);
+        apiLogger.parseError(`${stage}`, parseError as Error);
         return NextResponse.json(getMockInsightData(stage));
       }
 

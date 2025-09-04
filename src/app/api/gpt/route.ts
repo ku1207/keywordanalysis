@@ -72,7 +72,7 @@ JSON 형태로 출력할 때 '''json과 같이 영역은 출력하지 말고 구
             const batchCategoryData = JSON.parse(result.output_text);
             return batchCategoryData;
           } catch (parseError) {
-            apiLogger.parseError(`배치 ${batchIndex + 1}`, parseError);
+            apiLogger.parseError(`배치 ${batchIndex + 1}`, parseError as Error);
             // 파싱 실패 시 해당 배치만 목 데이터로 대체
             return getMockCategoryData(batch);
           }

@@ -71,7 +71,7 @@ ${JSON.stringify(data, null, 2)}`;
         journeyMapData = JSON.parse(result.output_text);
         apiLogger.parseSuccess('사용자 여정지도');
       } catch (parseError) {
-        apiLogger.parseError('사용자 여정지도', parseError);
+        apiLogger.parseError('사용자 여정지도', parseError as Error);
         journeyMapData = getMockJourneyMapData();
       }
 
@@ -163,7 +163,7 @@ ${JSON.stringify(data, null, 2)}`;
           ganttData = JSON.parse(ganttResult.output_text);
           apiLogger.parseSuccess('간트차트');
         } catch (ganttParseError) {
-          apiLogger.parseError('간트차트', ganttParseError);
+          apiLogger.parseError('간트차트', ganttParseError as Error);
           ganttData = getMockGanttData();
         }
       } catch (ganttError) {
