@@ -77,7 +77,7 @@ JSON 형태로 출력할 때 '''json과 같이 영역은 출력하지 말고 구
             return getMockCategoryData(batch);
           }
         } catch (apiError) {
-          apiLogger.apiError(`배치 ${batchIndex + 1} GPT-5`, apiError);
+          apiLogger.apiError(`배치 ${batchIndex + 1} GPT-5`, apiError as Error);
           // API 호출 실패 시 해당 배치만 목 데이터로 대체
           return getMockCategoryData(batch);
         }
@@ -95,12 +95,12 @@ JSON 형태로 출력할 때 '''json과 같이 영역은 출력하지 말고 구
       return NextResponse.json(allCategoryData);
 
     } catch (error) {
-      apiLogger.warning('GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: error.message || error });
+      apiLogger.warning('GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: error instanceof Error ? error.message : String(error) });
       return NextResponse.json(getMockCategoryData(keywords));
     }
 
   } catch (error) {
-    apiLogger.error('API Route 오류', { error: error.message || error });
+    apiLogger.error('API Route 오류', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

@@ -167,12 +167,12 @@ ${keywordInfoString}`;
       }
 
     } catch (error) {
-      apiLogger.warning('GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: error.message || error });
+      apiLogger.warning('GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: error instanceof Error ? error.message : String(error) });
       return NextResponse.json(getMockInsightData(stage));
     }
 
   } catch (error) {
-    apiLogger.error('API Route 오류', { error: error.message || error });
+    apiLogger.error('API Route 오류', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

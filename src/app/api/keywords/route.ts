@@ -97,12 +97,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(transformedData);
 
     } catch (error) {
-      apiLogger.warning('네이버 검색광고 API 호출 실패, 실제 API 형태의 목 데이터를 반환합니다', { error: error.message || error });
+      apiLogger.warning('네이버 검색광고 API 호출 실패, 실제 API 형태의 목 데이터를 반환합니다', { error: error instanceof Error ? error.message : String(error) });
       return NextResponse.json(getMockKeywordData(hintKeywords));
     }
 
   } catch (error) {
-    apiLogger.error('API Route 오류', { error: error.message || error });
+    apiLogger.error('API Route 오류', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

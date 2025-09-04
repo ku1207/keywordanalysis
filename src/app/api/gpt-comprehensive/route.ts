@@ -167,7 +167,7 @@ ${JSON.stringify(data, null, 2)}`;
           ganttData = getMockGanttData();
         }
       } catch (ganttError) {
-        apiLogger.warning('간트차트 GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: ganttError.message || ganttError });
+        apiLogger.warning('간트차트 GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: ganttError instanceof Error ? ganttError.message : String(ganttError) });
         ganttData = getMockGanttData();
       }
 
@@ -180,7 +180,7 @@ ${JSON.stringify(data, null, 2)}`;
       return NextResponse.json(combinedResult);
 
     } catch (error) {
-      apiLogger.warning('GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: error.message || error });
+      apiLogger.warning('GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: error instanceof Error ? error.message : String(error) });
       const fallbackResult = {
         journeyMap: getMockJourneyMapData(),
         ganttChart: getMockGanttData()
@@ -189,7 +189,7 @@ ${JSON.stringify(data, null, 2)}`;
     }
 
   } catch (error) {
-    apiLogger.error('API Route 오류', { error: error.message || error });
+    apiLogger.error('API Route 오류', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }
