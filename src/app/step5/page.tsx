@@ -27,7 +27,7 @@ interface GanttData {
     endStageIndex: number;
     resourceAllocation: {
       method: string;
-      notes: string;
+      methodRationale: string;
       budgetSplitPct: {
         검색광고: number;
         디스플레이: number;
@@ -263,8 +263,10 @@ export default function ComprehensiveInsightsPage() {
                                   <p className="text-sm text-gray-700">
                                     <span className="font-medium">방법:</span> {range.resourceAllocation.method}
                                   </p>
-                                  {range.resourceAllocation.notes && (
-                                    <p className="text-sm text-gray-600">{range.resourceAllocation.notes}</p>
+                                  {range.resourceAllocation.methodRationale && (
+                                    <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded border">
+                                      <span className="font-medium">근거:</span> {range.resourceAllocation.methodRationale}
+                                    </p>
                                   )}
                                   
                                   {/* 원형 그래프 */}
@@ -350,7 +352,7 @@ export default function ComprehensiveInsightsPage() {
                                     <div>
                                       <span className="text-sm font-medium text-gray-700">핵심 키워드:</span>
                                       <div className="flex flex-wrap gap-1 mt-1">
-                                        {range.keywordTargeting.coreKeywords.slice(0, 6).map((keyword, i) => (
+                                        {range.keywordTargeting.coreKeywords.slice(0, 5).map((keyword, i) => (
                                           <span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
                                             {keyword}
                                           </span>
@@ -362,7 +364,7 @@ export default function ComprehensiveInsightsPage() {
                                     <div>
                                       <span className="text-sm font-medium text-gray-700">롱테일 키워드:</span>
                                       <div className="flex flex-wrap gap-1 mt-1">
-                                        {range.keywordTargeting.longTailKeywords.slice(0, 4).map((keyword, i) => (
+                                        {range.keywordTargeting.longTailKeywords.slice(0, 5).map((keyword, i) => (
                                           <span key={i} className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded border">
                                             {keyword}
                                           </span>
@@ -410,7 +412,7 @@ export default function ComprehensiveInsightsPage() {
                                     <div>
                                       <span className="text-sm font-medium text-gray-700">광고 소재:</span>
                                       <ul className="text-sm text-gray-600 ml-4 mt-1 space-y-1">
-                                        {range.contentStrategy.adCreatives.slice(0, 4).map((creative, i) => (
+                                        {range.contentStrategy.adCreatives.slice(0, 5).map((creative, i) => (
                                           <li key={i} className="list-disc">{creative}</li>
                                         ))}
                                       </ul>

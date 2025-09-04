@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { getOpenAIClient } from '@/lib/openai-client';
+import { apiLogger } from '@/lib/api-logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // 환경변수 확인
     if (!process.env.OPENAI_API_KEY) {
-      console.warn('OpenAI API 키가 설정되지 않았습니다. 목 데이터를 반환합니다.');
+      apiLogger.warning('OpenAI API 키가 설정되지 않았습니다. 목 데이터를 반환합니다.');
       return NextResponse.json(getMockCategoryData(keywords));
     }
 
@@ -31,7 +28,7 @@ export async function POST(request: NextRequest) {
         keywordBatches.push(keywords.slice(i, i + batchSize));
       }
       
-      console.log(`🤖 GPT-5 요청 시작 - ${keywordBatches.length}개 배치로 분할`);
+      apiLogger.info(`GPT-5 요청 시작`, { batchCount: keywordBatches.length, totalKeywords: keywords.length });
       
       // 모든 배치 결과를 저장할 객체
       let allCategoryData = {};
@@ -57,9 +54,10 @@ JSON 형태로 출력할 때 '''json과 같이 영역은 출력하지 말고 구
   ...
 }`;
 
-        console.log(`📝 배치 ${batchIndex + 1}/${keywordBatches.length} 처리 시작 (${batch.length}개 키워드)`);
+        apiLogger.info(`배치 ${batchIndex + 1}/${keywordBatches.length} 처리 시작`, { keywordCount: batch.length });
         
         try {
+          const openai = getOpenAIClient();
           const result = await openai.responses.create({
             model: "gpt-5",
             input: prompt,
@@ -67,19 +65,19 @@ JSON 형태로 출력할 때 '''json과 같이 영역은 출력하지 말고 구
             text: { verbosity: "low" },
           });
 
-          console.log(`✅ 배치 ${batchIndex + 1} GPT-5 응답 받음`);
+          apiLogger.success(`배치 ${batchIndex + 1} GPT-5 응답 받음`);
 
           // JSON 파싱 시도
           try {
             const batchCategoryData = JSON.parse(result.output_text);
             return batchCategoryData;
           } catch (parseError) {
-            console.error(`❌ 배치 ${batchIndex + 1} JSON 파싱 실패:`, parseError);
+            apiLogger.parseError(`배치 ${batchIndex + 1}`, parseError);
             // 파싱 실패 시 해당 배치만 목 데이터로 대체
             return getMockCategoryData(batch);
           }
         } catch (apiError) {
-          console.error(`❌ 배치 ${batchIndex + 1} API 호출 실패:`, apiError);
+          apiLogger.apiError(`배치 ${batchIndex + 1} GPT-5`, apiError);
           // API 호출 실패 시 해당 배치만 목 데이터로 대체
           return getMockCategoryData(batch);
         }
@@ -93,16 +91,16 @@ JSON 형태로 출력할 때 '''json과 같이 영역은 출력하지 말고 구
         allCategoryData = { ...allCategoryData, ...batchData };
       });
       
-      console.log('🎉 모든 배치 처리 완료');
+      apiLogger.success('모든 배치 처리 완료');
       return NextResponse.json(allCategoryData);
 
     } catch (error) {
-      console.warn('GPT-5 API 호출 실패, 목 데이터를 반환합니다:', error);
+      apiLogger.warning('GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: error.message || error });
       return NextResponse.json(getMockCategoryData(keywords));
     }
 
   } catch (error) {
-    console.error('API Route 오류:', error);
+    apiLogger.error('API Route 오류', { error: error.message || error });
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

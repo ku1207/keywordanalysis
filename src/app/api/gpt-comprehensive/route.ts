@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { getOpenAIClient } from '@/lib/openai-client';
+import { apiLogger } from '@/lib/api-logger';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔥 [STEP 0] 사용자 여정지도 요청 시작:', {
+    apiLogger.apiStart('사용자 여정지도', {
       method: request.method,
-      url: request.url,
-      timestamp: new Date().toISOString()
+      url: request.url
     });
 
     const { data } = await request.json();
 
     // 환경변수 확인
     if (!process.env.OPENAI_API_KEY) {
-      console.warn('OpenAI API 키가 설정되지 않았습니다. 목 데이터를 반환합니다.');
+      apiLogger.warning('OpenAI API 키가 설정되지 않았습니다. 목 데이터를 반환합니다.');
       return NextResponse.json(getMockJourneyMapData());
     }
 
@@ -57,8 +53,9 @@ export async function POST(request: NextRequest) {
 ###데이터
 ${JSON.stringify(data, null, 2)}`;
 
-      console.log(`📝 사용자 여정지도 감정 분석 요청`);
+      apiLogger.info('사용자 여정지도 감정 분석 요청');
 
+      const openai = getOpenAIClient();
       const result = await openai.responses.create({
         model: "gpt-5",
         input: prompt,
@@ -66,67 +63,68 @@ ${JSON.stringify(data, null, 2)}`;
         text: { verbosity: "low" },
       });
 
-      console.log(`✅ GPT-5 사용자 여정지도 응답 받음`);
+      apiLogger.apiSuccess('GPT-5 사용자 여정지도');
 
       // JSON 파싱 시도
       let journeyMapData;
       try {
         journeyMapData = JSON.parse(result.output_text);
-        console.log(`✅ 사용자 여정지도 데이터 파싱 성공`);
+        apiLogger.parseSuccess('사용자 여정지도');
       } catch (parseError) {
-        console.error(`❌ JSON 파싱 실패:`, parseError);
+        apiLogger.parseError('사용자 여정지도', parseError);
         journeyMapData = getMockJourneyMapData();
       }
 
       // 간트차트 API 호출
-      console.log(`📝 간트차트 전략 분석 시작`);
+      apiLogger.info('간트차트 전략 분석 시작');
       let ganttData;
       try {
         const ganttPrompt = `###지시사항
 입력(① **stageEmotionScores**(여정지도 결과), ② **키워드데이터**)값에 분석하여 각 범위(rangeId)에 대해 **연속 구간 단위 전략 5종**만 산출한다. 출력은 **JSON만** 반환한다.
 
-###범위 자동 도출 규칙( ranges 미제공 시 )
-- 감정 점수의 변화로 **연속 구간**을 2~3개 제안. 절대 비연속 금지.
+###범위 자동 도출 규칙
+- 감정 점수의 변화로 **연속 구간**을 2~3개 제안(비연속 금지).
 - **컷포인트 후보**: |Δemotion| ≥ 2, 중립선(5) 교차, 국소 최소(≤4)·최대(≥8) 직후.
-- 후보를 기반으로 2개 우선(기본: [1~3], [4~6]). 신호가 강하면 3개까지 허용.
-- 각 범위에 간단한 라벨을 생성(예: "상단퍼널(1~3)", "하단퍼널(4~6)").
+- 기본 2개: [1~3], [4~6]; 신호 강하면 3개까지.
+- 각 범위 라벨 예: "첫 번째퍼널(1)", "두 번째퍼널(2~3)", ....
 
-###자원 배분 가중(감정 점수 활용)
-- 범위별 가중치 w = Σ(10 - emotion_i) / 범위내 단계수  (낮은 감정=마찰↑ → 더 많은 개선/콘텐츠 투자)
-- 검색량 신호가 있으면 w를 곱해 보정(예: w' = w × normalized_search_volume). 신호 없으면 method="추정".
+###자원 배분 가중
+- 범위별 가중치 구성요소:
+  - w_emotion = 평균(10 - emotion_i)   // 낮은 감정일수록 투자↑
+  - w_demand  = 정규화된 검색량(0~1)    // 키워드데이터 search_volume
+  - w_quality = 정규화된 CTR(0~1)       // 키워드데이터 ctr
+- 최종 w_final = α·w_emotion + β·w_demand + γ·w_quality
+  - 기본값: α=0.5, β=0.3, γ=0.2 (가중치 합=1)
+  - 결측 처리: 없는 항목의 가중치는 0으로 두고 남은 비율로 **재정규화**
+- budgetSplitPct는 w_final을 기준으로 채널(검색광고/디스플레이/콘텐츠/CRM)을 100%로 분배
+  - 예: w_emotion↑이면 콘텐츠·CRM 비중↑, w_quality↑이면 검색광고 비중↑
 
-###산출물: 각 범위의 전략 5종(리스트 최대 3개, 실험 최대 2개)
-1) resourceAllocation(총합 100% 또는 "-")
-2) keywordTargeting(핵심/롱테일/브랜드vs일반/매치타입/네거티브/지역언어)
-3) contentStrategy(광고소재·랜딩 IA/CTA·교육콘텐츠·소셜프루프)
-4) nicheStrategy(세그먼트·가치제안·포지셔닝)
-5) retentionStrategy(CRM/리마케팅·로열티·후기/NPS 루프)
-
-※ KPI·직접 인용·리스크 필드 없음. 불확실 시 "-" 표기.
+###산출물: 각 범위의 전략 5종
+- 기본 리스트 상한: **최대 3개** (예외: **coreKeywords/longTailKeywords/adCreatives는 5개**)
+- 실험 상한: **최대 2개**
+- KPI·직접 인용·리스크 필드 없음. 불확실 시 "-".
 
 ###출력 형식(JSON · 엄격)
 {
   "ganttStrategy": [
     {
       "rangeId": "R1",
-      "rangeLabel": "상단퍼널(1~3)",
+      "rangeLabel": "첫 번째퍼널(1~3)",
       "startStageIndex": 1,
       "endStageIndex": 3,
       "resourceAllocation": {
         "method": "검색량 기반 | 추정 | -",
-        "notes": "-",
+        "methodRationale": "감정가중·검색량·CTR을 합성한 w_final로 채널 비중을 100%로 정규화(≤100자)",
         "budgetSplitPct": { "검색광고": 40, "디스플레이": 20, "콘텐츠": 20, "CRM/리텐션": 20 }
       },
       "keywordTargeting": {
-        "coreKeywords": ["최대 3개"],
-        "longTailKeywords": ["최대 3개"],
+        "coreKeywords": ["최대 5개"],
+        "longTailKeywords": ["최대 5개"],
         "brandVsNonBrand": { "brandSharePct": 30, "nonBrandSharePct": 70 },
-        "matchTypes": ["정확","구문","확장"],
-        "negativeKeywords": ["최대 3개"],
-        "geoLangNotes": "-"
+        "negativeKeywords": ["최대 3개"]
       },
       "contentStrategy": {
-        "adCreatives": ["최대 3개"],
+        "adCreatives": ["최대 5개"],
         "landingPage": { "keySections": ["최대 3개"], "primaryCTA": "한 문장" },
         "educationalContent": ["최대 3개"],
         "socialProof": ["최대 3개"]
@@ -159,17 +157,17 @@ ${JSON.stringify(data, null, 2)}`;
           text: { verbosity: "low" },
         });
 
-        console.log(`✅ GPT-5 간트차트 전략 응답 받음`);
+        apiLogger.apiSuccess('GPT-5 간트차트 전략');
 
         try {
           ganttData = JSON.parse(ganttResult.output_text);
-          console.log(`✅ 간트차트 데이터 파싱 성공`);
+          apiLogger.parseSuccess('간트차트');
         } catch (ganttParseError) {
-          console.error(`❌ 간트차트 JSON 파싱 실패:`, ganttParseError);
+          apiLogger.parseError('간트차트', ganttParseError);
           ganttData = getMockGanttData();
         }
       } catch (ganttError) {
-        console.warn('간트차트 GPT-5 API 호출 실패, 목 데이터를 반환합니다:', ganttError);
+        apiLogger.warning('간트차트 GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: ganttError.message || ganttError });
         ganttData = getMockGanttData();
       }
 
@@ -182,7 +180,7 @@ ${JSON.stringify(data, null, 2)}`;
       return NextResponse.json(combinedResult);
 
     } catch (error) {
-      console.warn('GPT-5 API 호출 실패, 목 데이터를 반환합니다:', error);
+      apiLogger.warning('GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: error.message || error });
       const fallbackResult = {
         journeyMap: getMockJourneyMapData(),
         ganttChart: getMockGanttData()
@@ -191,7 +189,7 @@ ${JSON.stringify(data, null, 2)}`;
     }
 
   } catch (error) {
-    console.error('API Route 오류:', error);
+    apiLogger.error('API Route 오류', { error: error.message || error });
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }
@@ -222,20 +220,20 @@ function getMockGanttData() {
         "startStageIndex": 1,
         "endStageIndex": 3,
         "resourceAllocation": {
-          "method": "추정",
-          "notes": "초기 인지 단계에 집중 투자",
+          "method": "검색량 기반",
+          "methodRationale": "낮은 감정점수(4점)로 콘텐츠 투자 증대, 높은 검색량으로 검색광고 집중",
           "budgetSplitPct": { "검색광고": 45, "디스플레이": 25, "콘텐츠": 20, "CRM/리텐션": 10 }
         },
         "keywordTargeting": {
-          "coreKeywords": ["브랜드명", "카테고리명", "문제키워드"],
-          "longTailKeywords": ["문제해결방법", "비교가이드", "사용법"],
+          "coreKeywords": ["브랜드명", "카테고리명", "문제키워드", "주요상품명", "핵심서비스"],
+          "longTailKeywords": ["문제해결방법", "비교가이드", "사용법", "구매팁", "선택기준"],
           "brandVsNonBrand": { "brandSharePct": 30, "nonBrandSharePct": 70 },
           "matchTypes": ["정확","구문","확장"],
           "negativeKeywords": ["무료", "저렴한", "할인"],
           "geoLangNotes": "전국 타겟, 한국어 위주"
         },
         "contentStrategy": {
-          "adCreatives": ["문제해결 메시지", "전문성 강조", "신뢰성 어필"],
+          "adCreatives": ["문제해결 메시지", "전문성 강조", "신뢰성 어필", "차별화 포인트", "고객 성공사례"],
           "landingPage": { "keySections": ["문제정의", "솔루션소개", "신뢰지표"], "primaryCTA": "무료 상담 신청하기" },
           "educationalContent": ["가이드 콘텐츠", "비교 분석", "사용 사례"],
           "socialProof": ["고객 후기", "전문가 추천", "언론 보도"]
@@ -258,20 +256,20 @@ function getMockGanttData() {
         "startStageIndex": 4,
         "endStageIndex": 6,
         "resourceAllocation": {
-          "method": "추정",
-          "notes": "전환 및 유지에 집중 투자",
+          "method": "검색량 기반",
+          "methodRationale": "높은 구매의도 감정점수(7-8점)로 검색광고 집중, CTR 최적화로 전환률 향상",
           "budgetSplitPct": { "검색광고": 30, "디스플레이": 15, "콘텐츠": 25, "CRM/리텐션": 30 }
         },
         "keywordTargeting": {
-          "coreKeywords": ["구매", "주문", "결제"],
-          "longTailKeywords": ["할인코드", "배송정보", "사용후기"],
+          "coreKeywords": ["구매", "주문", "결제", "할인", "특가"],
+          "longTailKeywords": ["할인코드", "배송정보", "사용후기", "구매가이드", "최저가"],
           "brandVsNonBrand": { "brandSharePct": 60, "nonBrandSharePct": 40 },
           "matchTypes": ["정확","구문"],
           "negativeKeywords": ["무료체험", "취소", "환불"],
           "geoLangNotes": "전국 타겟, 한국어 위주"
         },
         "contentStrategy": {
-          "adCreatives": ["할인 혜택", "긴급성 메시지", "보장 정책"],
+          "adCreatives": ["할인 혜택", "긴급성 메시지", "보장 정책", "무료배송", "즉시할인"],
           "landingPage": { "keySections": ["상품정보", "할인혜택", "간편결제"], "primaryCTA": "지금 구매하기" },
           "educationalContent": ["사용 가이드", "FAQ", "고객 지원"],
           "socialProof": ["구매 후기", "사용 사례", "평점"]

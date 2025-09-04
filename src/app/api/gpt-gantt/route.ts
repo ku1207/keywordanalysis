@@ -1,3 +1,5 @@
+// 사용하지 않는 중복 API - gpt-comprehensive에서 간트차트 처리함
+/*
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
@@ -212,3 +214,4 @@ function getMockGanttData() {
     ]
   };
 }
+*/

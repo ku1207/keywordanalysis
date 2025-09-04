@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Progress } from '@/components/ui/progress';
@@ -41,6 +41,8 @@ export default function AnalysisOverviewPage() {
   
   const [journeyStages, setJourneyStages] = useState(defaultJourneyStages);
   const [loading, setLoading] = useState(false);
+  const isProcessingRef = useRef(false);
+  const processedKeywordsRef = useRef<string>('');
 
   useEffect(() => {
     setCurrentStep(3);
@@ -49,7 +51,17 @@ export default function AnalysisOverviewPage() {
     const calculateJourneyDistribution = async () => {
       if (keywordData.length === 0) return;
       
+      // 중복 실행 방지: 키워드가 동일하거나 이미 처리 중이면 return
+      const currentKeywords = keywordData.map(item => item.keyword).join(',');
+      if (isProcessingRef.current || processedKeywordsRef.current === currentKeywords) {
+        console.log('step3: 중복 실행 방지 - 이미 처리됨 또는 처리 중');
+        return;
+      }
+      
+      isProcessingRef.current = true;
+      processedKeywordsRef.current = currentKeywords;
       setLoading(true);
+      
       try {
         // 키워드 리스트 추출
         const keywords = keywordData.map(item => item.keyword);
@@ -102,11 +114,12 @@ export default function AnalysisOverviewPage() {
         ]);
       } finally {
         setLoading(false);
+        isProcessingRef.current = false;
       }
     };
     
     calculateJourneyDistribution();
-  }, [setCurrentStep, keywordData, setCategoryData]);
+  }, [keywordData]);
 
   const handlePrev = () => {
     prevStep();

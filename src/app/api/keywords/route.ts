@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { apiLogger } from '@/lib/api-logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,13 +25,12 @@ export async function GET(request: NextRequest) {
     const customerId = process.env.NAVER_ADS_CUSTOMER_ID;
 
     if (!customerSecret || !accessToken || !customerId) {
-      console.warn('네이버 검색광고 API 키가 설정되지 않았습니다. 실제 API 형태의 목 데이터를 반환합니다.');
+      apiLogger.warning('네이버 검색광고 API 키가 설정되지 않았습니다. 실제 API 형태의 목 데이터를 반환합니다.');
       return NextResponse.json(getMockKeywordData(hintKeywords));
     }
 
     try {
-      console.log('🔄 네이버 검색광고 API 호출 시작');
-      console.log('📝 요청 파라미터:', { hintKeywords, siteId, biztpId, event, month, showDetail });
+      apiLogger.apiStart('네이버 검색광고 API', { hintKeywords, siteId, biztpId, event, month, showDetail });
       
       // 네이버 검색광고 API 요청
       const queryParams = new URLSearchParams({
@@ -53,8 +53,7 @@ export async function GET(request: NextRequest) {
         .update(message)
         .digest('base64');
 
-      console.log('🌐 API URL:', `https://api.naver.com/keywordstool?${queryParams}`);
-      console.log('🔐 시그니처 정보:', { timestamp, message, signature });
+      apiLogger.info('API 요청 정보', { url: `https://api.naver.com/keywordstool?${queryParams}`, timestamp, signature: signature.substring(0, 10) + '...' });
       
       const response = await fetch(`https://api.naver.com/keywordstool?${queryParams}`, {
         method: 'GET',
@@ -67,16 +66,16 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      console.log('📡 API 응답 상태:', response.status);
+      apiLogger.info('API 응답 상태', { status: response.status });
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ API 에러 응답:', errorText);
+        apiLogger.error('API 에러 응답', { status: response.status, error: errorText });
         throw new Error(`네이버 API 에러: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('✅ API 응답 데이터:', JSON.stringify(data, null, 2));
+      apiLogger.success('API 응답 데이터 수신', { keywordCount: data.keywordList?.length || 0 });
       
       // keywordList 추출
       const keywordList = data.keywordList || [];
@@ -94,16 +93,16 @@ export async function GET(request: NextRequest) {
         compIdx: item.compIdx
       }));
 
-      console.log('🔄 변환된 데이터:', transformedData);
+      apiLogger.success('데이터 변환 완료', { transformedCount: transformedData.length });
       return NextResponse.json(transformedData);
 
     } catch (error) {
-      console.warn('네이버 검색광고 API 호출 실패, 실제 API 형태의 목 데이터를 반환합니다:', error);
+      apiLogger.warning('네이버 검색광고 API 호출 실패, 실제 API 형태의 목 데이터를 반환합니다', { error: error.message || error });
       return NextResponse.json(getMockKeywordData(hintKeywords));
     }
 
   } catch (error) {
-    console.error('API Route 오류:', error);
+    apiLogger.error('API Route 오류', { error: error.message || error });
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

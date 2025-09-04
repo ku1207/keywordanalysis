@@ -53,7 +53,7 @@ export default function DataDisplayPage() {
     };
 
     fetchKeywordData();
-  }, [keyword, setCurrentStep, setKeywordData, router]);
+  }, [keyword]);
 
   const handleNext = () => {
     if (keywordData.length === 0) {

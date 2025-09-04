@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { getOpenAIClient } from '@/lib/openai-client';
+import { apiLogger } from '@/lib/api-logger';
 
 interface KeywordInfo {
   keyword: string;
@@ -26,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // 환경변수 확인
     if (!process.env.OPENAI_API_KEY) {
-      console.warn('OpenAI API 키가 설정되지 않았습니다. 목 데이터를 반환합니다.');
+      apiLogger.warning('OpenAI API 키가 설정되지 않았습니다. 목 데이터를 반환합니다.');
       return NextResponse.json(getMockInsightData(stage));
     }
 
@@ -148,8 +145,9 @@ export async function POST(request: NextRequest) {
 ###키워드 정보
 ${keywordInfoString}`;
 
-      console.log(`📝 ${stage} 마케팅 인사이트 분석 요청`);
+      apiLogger.info(`${stage} 마케팅 인사이트 분석 요청`);
 
+      const openai = getOpenAIClient();
       const result = await openai.responses.create({
         model: "gpt-5",
         input: prompt,
@@ -157,24 +155,24 @@ ${keywordInfoString}`;
         text: { verbosity: "low" },
       });
 
-      console.log(`✅ ${stage} GPT-5 인사이트 응답 받음`);
+      apiLogger.apiSuccess(`${stage} GPT-5 인사이트`);
 
       // JSON 파싱 시도
       try {
         const insightData = JSON.parse(result.output_text);
         return NextResponse.json(insightData);
       } catch (parseError) {
-        console.error(`❌ ${stage} JSON 파싱 실패:`, parseError);
+        apiLogger.parseError(`${stage}`, parseError);
         return NextResponse.json(getMockInsightData(stage));
       }
 
     } catch (error) {
-      console.warn('GPT-5 API 호출 실패, 목 데이터를 반환합니다:', error);
+      apiLogger.warning('GPT-5 API 호출 실패, 목 데이터를 반환합니다', { error: error.message || error });
       return NextResponse.json(getMockInsightData(stage));
     }
 
   } catch (error) {
-    console.error('API Route 오류:', error);
+    apiLogger.error('API Route 오류', { error: error.message || error });
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }
