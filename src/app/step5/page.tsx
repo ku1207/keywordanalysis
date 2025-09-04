@@ -27,7 +27,7 @@ interface GanttData {
     endStageIndex: number;
     resourceAllocation: {
       method: string;
-      methodRationale: string;
+      notes: string;
       budgetSplitPct: {
         검색광고: number;
         디스플레이: number;
@@ -263,9 +263,9 @@ export default function ComprehensiveInsightsPage() {
                                   <p className="text-sm text-gray-700">
                                     <span className="font-medium">방법:</span> {range.resourceAllocation.method}
                                   </p>
-                                  {range.resourceAllocation.methodRationale && (
+                                  {range.resourceAllocation.notes && (
                                     <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded border">
-                                      <span className="font-medium">근거:</span> {range.resourceAllocation.methodRationale}
+                                      <span className="font-medium">근거:</span> {range.resourceAllocation.notes}
                                     </p>
                                   )}
                                   

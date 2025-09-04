@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         .update(message)
         .digest('base64');
 
-      apiLogger.info('API 요청 정보', { url: `https://api.naver.com/keywordstool?${queryParams}`, timestamp, signature: signature.substring(0, 10) + '...' });
+      apiLogger.info('API 요청 정보', { url: `https://api.naver.com/keywordstool?${queryParams}`, timestamp: timestamp.toString(), signature: signature.substring(0, 10) + '...' });
       
       const response = await fetch(`https://api.naver.com/keywordstool?${queryParams}`, {
         method: 'GET',
