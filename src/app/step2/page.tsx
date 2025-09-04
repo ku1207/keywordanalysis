@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -29,31 +29,30 @@ export default function DataDisplayPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30;
 
+  const fetchKeywordData = useCallback(async () => {
+    if (!keyword) {
+      router.push('/');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await getKeywordTrendData(keyword);
+      setKeywordData(data);
+    } catch (err) {
+      setError('데이터를 가져오는데 실패했습니다.');
+      console.error('키워드 데이터 가져오기 실패:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [keyword, router, setKeywordData]);
+
   useEffect(() => {
     setCurrentStep(2);
-    
-    const fetchKeywordData = async () => {
-      if (!keyword) {
-        router.push('/');
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const data = await getKeywordTrendData(keyword);
-        setKeywordData(data);
-      } catch (err) {
-        setError('데이터를 가져오는데 실패했습니다.');
-        console.error('키워드 데이터 가져오기 실패:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchKeywordData();
-  }, [keyword]);
+  }, [setCurrentStep, fetchKeywordData]);
 
   const handleNext = () => {
     if (keywordData.length === 0) {

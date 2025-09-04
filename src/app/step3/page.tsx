@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Progress } from '@/components/ui/progress';
@@ -44,82 +44,80 @@ export default function AnalysisOverviewPage() {
   const isProcessingRef = useRef(false);
   const processedKeywordsRef = useRef<string>('');
 
+  const calculateJourneyDistribution = useCallback(async () => {
+    if (keywordData.length === 0) return;
+    
+    // 중복 실행 방지: 키워드가 동일하거나 이미 처리 중이면 return
+    const currentKeywords = keywordData.map(item => item.keyword).join(',');
+    if (isProcessingRef.current || processedKeywordsRef.current === currentKeywords) {
+      console.log('step3: 중복 실행 방지 - 이미 처리됨 또는 처리 중');
+      return;
+    }
+    
+    isProcessingRef.current = true;
+    processedKeywordsRef.current = currentKeywords;
+    setLoading(true);
+    
+    try {
+      // 키워드 리스트 추출
+      const keywords = keywordData.map(item => item.keyword);
+      
+      // GPT API 호출
+      console.log('step3: GPT API 호출 시작', { keywordCount: keywords.length, timestamp: new Date().toISOString() });
+      const response = await axios.post('/api/gpt', { keywords });
+      const categoryData = response.data;
+      console.log('step3: GPT API 호출 완료', { timestamp: new Date().toISOString() });
+      
+      // 스토어에 분류 결과 저장
+      setCategoryData(categoryData);
+      
+      // 카테고리별 검색량 계산
+      const categoryVolumes: { [key: string]: number } = {};
+      
+      keywordData.forEach(item => {
+        const category = categoryData[item.keyword];
+        if (category) {
+          const pcCount = item.monthlyPcQcCnt === '<10' ? 10 : (parseInt(item.monthlyPcQcCnt) || 0);
+          const mobileCount = item.monthlyMobileQcCnt === '<10' ? 10 : (parseInt(item.monthlyMobileQcCnt) || 0);
+          const totalVolume = pcCount + mobileCount;
+          
+          categoryVolumes[category] = (categoryVolumes[category] || 0) + totalVolume;
+        }
+      });
+      
+      // 전체 검색량
+      const totalVolume = Object.values(categoryVolumes).reduce((sum, vol) => sum + vol, 0);
+      
+      // 비율 계산 및 업데이트
+      const updatedStages = defaultJourneyStages.map(stage => {
+        const volume = categoryVolumes[stage.key] || 0;
+        const percentage = totalVolume > 0 ? Math.round((volume / totalVolume) * 100) : 0;
+        return { ...stage, percentage };
+      });
+      
+      setJourneyStages(updatedStages);
+      
+    } catch (error) {
+      console.error('구매여정 분석 실패:', error);
+      // 에러 시 기본값 사용
+      setJourneyStages([
+        { stage: '1. 문제 인식', key: '문제 인식 단계', percentage: 25, color: 'bg-red-500' },
+        { stage: '2. 정보 탐색', key: '정보 탐색 단계', percentage: 20, color: 'bg-orange-500' },
+        { stage: '3. 대안 평가', key: '대안 평가 단계', percentage: 18, color: 'bg-yellow-500' },
+        { stage: '4. 구매 결정', key: '구매 결정 단계', percentage: 15, color: 'bg-green-500' },
+        { stage: '5. 구매 행동', key: '구매 행동 단계', percentage: 12, color: 'bg-blue-500' },
+        { stage: '6. 구매 후 행동', key: '구매 후 행동 단계', percentage: 10, color: 'bg-purple-500' },
+      ]);
+    } finally {
+      setLoading(false);
+      isProcessingRef.current = false;
+    }
+  }, [keywordData, setCategoryData]);
+
   useEffect(() => {
     setCurrentStep(3);
-    
-    // GPT API를 통해 키워드 분류 및 검색량 분포 계산
-    const calculateJourneyDistribution = async () => {
-      if (keywordData.length === 0) return;
-      
-      // 중복 실행 방지: 키워드가 동일하거나 이미 처리 중이면 return
-      const currentKeywords = keywordData.map(item => item.keyword).join(',');
-      if (isProcessingRef.current || processedKeywordsRef.current === currentKeywords) {
-        console.log('step3: 중복 실행 방지 - 이미 처리됨 또는 처리 중');
-        return;
-      }
-      
-      isProcessingRef.current = true;
-      processedKeywordsRef.current = currentKeywords;
-      setLoading(true);
-      
-      try {
-        // 키워드 리스트 추출
-        const keywords = keywordData.map(item => item.keyword);
-        
-        // GPT API 호출
-        console.log('step3: GPT API 호출 시작', { keywordCount: keywords.length, timestamp: new Date().toISOString() });
-        const response = await axios.post('/api/gpt', { keywords });
-        const categoryData = response.data;
-        console.log('step3: GPT API 호출 완료', { timestamp: new Date().toISOString() });
-        
-        // 스토어에 분류 결과 저장
-        setCategoryData(categoryData);
-        
-        // 카테고리별 검색량 계산
-        const categoryVolumes: { [key: string]: number } = {};
-        
-        keywordData.forEach(item => {
-          const category = categoryData[item.keyword];
-          if (category) {
-            const pcCount = item.monthlyPcQcCnt === '<10' ? 10 : (parseInt(item.monthlyPcQcCnt) || 0);
-            const mobileCount = item.monthlyMobileQcCnt === '<10' ? 10 : (parseInt(item.monthlyMobileQcCnt) || 0);
-            const totalVolume = pcCount + mobileCount;
-            
-            categoryVolumes[category] = (categoryVolumes[category] || 0) + totalVolume;
-          }
-        });
-        
-        // 전체 검색량
-        const totalVolume = Object.values(categoryVolumes).reduce((sum, vol) => sum + vol, 0);
-        
-        // 비율 계산 및 업데이트
-        const updatedStages = defaultJourneyStages.map(stage => {
-          const volume = categoryVolumes[stage.key] || 0;
-          const percentage = totalVolume > 0 ? Math.round((volume / totalVolume) * 100) : 0;
-          return { ...stage, percentage };
-        });
-        
-        setJourneyStages(updatedStages);
-        
-      } catch (error) {
-        console.error('구매여정 분석 실패:', error);
-        // 에러 시 기본값 사용
-        setJourneyStages([
-          { stage: '1. 문제 인식', key: '문제 인식 단계', percentage: 25, color: 'bg-red-500' },
-          { stage: '2. 정보 탐색', key: '정보 탐색 단계', percentage: 20, color: 'bg-orange-500' },
-          { stage: '3. 대안 평가', key: '대안 평가 단계', percentage: 18, color: 'bg-yellow-500' },
-          { stage: '4. 구매 결정', key: '구매 결정 단계', percentage: 15, color: 'bg-green-500' },
-          { stage: '5. 구매 행동', key: '구매 행동 단계', percentage: 12, color: 'bg-blue-500' },
-          { stage: '6. 구매 후 행동', key: '구매 후 행동 단계', percentage: 10, color: 'bg-purple-500' },
-        ]);
-      } finally {
-        setLoading(false);
-        isProcessingRef.current = false;
-      }
-    };
-    
     calculateJourneyDistribution();
-  }, [keywordData]);
+  }, [setCurrentStep, calculateJourneyDistribution]);
 
   const handlePrev = () => {
     prevStep();

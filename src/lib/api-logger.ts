@@ -4,7 +4,7 @@ interface LogContext {
   method?: string;
   url?: string;
   timestamp?: string;
-  [key: string]: any;
+  [key: string]: string | number | boolean | undefined;
 }
 
 const LOG_ICONS = {
@@ -72,16 +72,16 @@ class APILogger {
     this.success(`${apiName} 응답 받음`, context);
   }
 
-  apiError(apiName: string, error: any, context?: LogContext) {
-    this.error(`${apiName} 호출 실패`, { error: error.message || error, ...context });
+  apiError(apiName: string, error: Error | string, context?: LogContext) {
+    this.error(`${apiName} 호출 실패`, { error: typeof error === 'string' ? error : error.message, ...context });
   }
 
   parseSuccess(dataType: string) {
     this.success(`${dataType} 데이터 파싱 성공`);
   }
 
-  parseError(dataType: string, error: any) {
-    this.error(`${dataType} JSON 파싱 실패`, { error: error.message || error });
+  parseError(dataType: string, error: Error | string) {
+    this.error(`${dataType} JSON 파싱 실패`, { error: typeof error === 'string' ? error : error.message });
   }
 }
 
